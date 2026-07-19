@@ -6,11 +6,13 @@
 #include "bsp_uart2.h"
 
 
+
 void AppHeartbeatTask(void *argument)
 {
     (void)argument;
 
     BSP_LED_Init();
+    int adcValue = 10;
 
     for (;;)
     {
@@ -19,6 +21,7 @@ void AppHeartbeatTask(void *argument)
         /*BSP_Relay_Toggle(BSP_RELAY_2);
         BSP_Relay_Toggle(BSP_RELAY_4);*/
         Debug_UART_Send("Heartbeat task started\r\n");
+        Debug_UART_Printf("ADC = %d\r\n", adcValue);
 
         osDelay(APP_HEARTBEAT_PERIOD_MS);
     }
