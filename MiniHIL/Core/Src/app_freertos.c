@@ -54,8 +54,15 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityBelowNormal,
   .stack_size = 512 * 4
+};
+/* Definitions for Protocol_Task */
+osThreadId_t Protocol_TaskHandle;
+const osThreadAttr_t Protocol_Task_attributes = {
+  .name = "Protocol_Task",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 1024 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,6 +72,7 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+void StartProtocol_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -98,6 +106,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
+  /* creation of Protocol_Task */
+  Protocol_TaskHandle = osThreadNew(StartProtocol_Task, NULL, &Protocol_Task_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -121,6 +132,25 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
 	AppHeartbeatTask(argument);
   /* USER CODE END StartDefaultTask */
+}
+
+/* USER CODE BEGIN Header_StartProtocol_Task */
+/**
+* @brief Function implementing the Protocol_Task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartProtocol_Task */
+void StartProtocol_Task(void *argument)
+{
+  /* USER CODE BEGIN StartProtocol_Task */
+  /* Infinite loop */
+  for(;;)
+  {
+	  vProtocolTask(argument);
+    //osDelay(1);
+  }
+  /* USER CODE END StartProtocol_Task */
 }
 
 /* Private application code --------------------------------------------------*/

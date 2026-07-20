@@ -2,9 +2,43 @@
 #include "app_config.h"
 #include "bsp_led.h"
 #include "bsp_relay.h"
-#include "cmsis_os.h"
+#include "cmsis_os2.h"
 #include "bsp_uart2.h"
+#include "bsp_uart1.h"
+//#include "usart.h"
+#include <string.h>
+#include <stdio.h>
 
+/* Queue handle — declared by CubeMX in freertos.c, we extern it */
+uint8_t uart1RxByte;
+/* ── Protocol task ──────────────────────────────────────────────
+   Blocks on queue — zero CPU usage while waiting.
+   Wakes instantly when ISR posts a byte.
+──────────────────────────────────────────────────────────────── */
+void vProtocolTask(void *pvParameters)
+{
+
+    const char *uart1Message = "UART1 working\r\n";
+    const char *debugMessage = "UART1 task started\r\n";
+
+    (void)pvParameters;
+
+    if (BSP_UART1_StartReceive() == false)
+    {
+        Debug_UART_Send("UART1 RX start failed\r\n");
+    }
+    Debug_UART_Send(debugMessage);
+
+    if (BSP_UART1_Send(uart1Message) == false)
+    {
+        Debug_UART_Send("UART1 TX failed\r\n");
+    }
+
+    for (;;)
+    {
+    	osDelay(1);
+    }
+}
 
 
 void AppHeartbeatTask(void *argument)
@@ -12,7 +46,7 @@ void AppHeartbeatTask(void *argument)
     (void)argument;
 
     BSP_LED_Init();
-    int adcValue = 10;
+    //int adcValue = 10;
 
     for (;;)
     {
@@ -21,8 +55,9 @@ void AppHeartbeatTask(void *argument)
         /*BSP_Relay_Toggle(BSP_RELAY_2);
         BSP_Relay_Toggle(BSP_RELAY_4);*/
         Debug_UART_Send("Heartbeat task started\r\n");
-        Debug_UART_Printf("ADC = %d\r\n", adcValue);
+        //Debug_UART_Printf("ADC = %d\r\n", adcValue);
 
         osDelay(APP_HEARTBEAT_PERIOD_MS);
     }
 }
+
