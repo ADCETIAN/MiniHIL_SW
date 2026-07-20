@@ -11,24 +11,72 @@
 
 /* Queue handle — declared by CubeMX in freertos.c, we extern it */
 uint8_t uart1RxByte;
+extern osMessageQueueId_t uart1RxQueueHandle;
+
+static void APP_UART1_RxCallback(uint8_t byte)
+{
+    osStatus_t status;
+
+    if (uart1RxQueueHandle == NULL)
+    {
+        return;
+    }
+
+    /*
+     * This function executes from UART interrupt context.
+     *
+     * Timeout must always be zero when osMessageQueuePut()
+     * is called from an interrupt.
+     */
+    status = osMessageQueuePut(
+        uart1RxQueueHandle,
+        &byte,
+        0U,
+        0U
+    );
+
+    if (status != osOK)
+    {
+        /*
+         * Queue is probably full.
+         * Do not print or block inside the interrupt.
+         * An overflow counter can be added later.
+         */
+    }
+}
+
 /* ── Protocol task ──────────────────────────────────────────────
    Blocks on queue — zero CPU usage while waiting.
    Wakes instantly when ISR posts a byte.
 ──────────────────────────────────────────────────────────────── */
 void vProtocolTask(void *pvParameters)
 {
-
     const char *uart1Message = "UART1 working\r\n";
-    const char *debugMessage = "UART1 task started\r\n";
 
     (void)pvParameters;
 
+    Debug_UART_Send("UART1 task started\r\n");
+
+    /*
+     * Register callback before starting UART reception.
+     */
+    BSP_UART1_RegisterRxCallback(APP_UART1_RxCallback);
+
+    /*
+     * Start UART1 reception only once.
+     */
     if (BSP_UART1_StartReceive() == false)
     {
-        Debug_UART_Send("UART1 RX start failed\r\n");
+        Debug_UART_Send("UART1 RX interrupt start failed\r\n");
     }
-    Debug_UART_Send(debugMessage);
+    else
+    {
+        Debug_UART_Send("UART1 RX interrupt started\r\n");
+    }
 
+    /*
+     * Test UART1 transmission.
+     */
     if (BSP_UART1_Send(uart1Message) == false)
     {
         Debug_UART_Send("UART1 TX failed\r\n");
@@ -36,7 +84,7 @@ void vProtocolTask(void *pvParameters)
 
     for (;;)
     {
-    	osDelay(1);
+        osDelay(100U);
     }
 }
 
@@ -44,20 +92,35 @@ void vProtocolTask(void *pvParameters)
 void AppHeartbeatTask(void *argument)
 {
     (void)argument;
+    uint8_t receivedByte;
+    osStatus_t status;
 
     BSP_LED_Init();
     //int adcValue = 10;
-
+    Debug_UART_Send("Heartbeat task started\r\n");
     for (;;)
     {
-        BSP_LED_Toggle(BSP_LED_STATUS);
+    	/*BSP_LED_Toggle(BSP_LED_STATUS);
         BSP_LED_Toggle(BSP_LED_ACTIVITY);
-        /*BSP_Relay_Toggle(BSP_RELAY_2);
+        BSP_Relay_Toggle(BSP_RELAY_2);
         BSP_Relay_Toggle(BSP_RELAY_4);*/
-        Debug_UART_Send("Heartbeat task started\r\n");
-        //Debug_UART_Printf("ADC = %d\r\n", adcValue);
 
-        osDelay(APP_HEARTBEAT_PERIOD_MS);
+        status = osMessageQueueGet(
+            uart1RxQueueHandle,
+            &receivedByte,
+            NULL,
+            osWaitForever
+        );
+
+        if (status == osOK)
+        {
+            Debug_UART_SendData(
+                &receivedByte,
+                1U
+            );
+
+            BSP_LED_Toggle(BSP_LED_ACTIVITY);
+        }
     }
 }
 

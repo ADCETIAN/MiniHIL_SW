@@ -1,10 +1,3 @@
-/*
- * bsp_uart1.c
- *
- *  Created on: 19-Jul-2026
- *      Author: Emagix
- */
-
 #include "bsp_uart1.h"
 #include "usart.h"
 
@@ -16,27 +9,23 @@
 #define BSP_UART1_TX_TIMEOUT_MS      100U
 
 /*
- * HAL_UART_Receive_IT() receives one byte into this variable.
+ * HAL stores each received byte here.
  */
 static uint8_t uart1RxByte;
 
 /*
- * Application receive callback.
+ * Application callback called from UART interrupt context.
  */
 static BSP_UART1_RxCallback_t uart1RxCallback = NULL;
 
 
 bool BSP_UART1_StartReceive(void)
 {
-    HAL_StatusTypeDef status;
-
-    status = HAL_UART_Receive_IT(
-        &BSP_UART1_HANDLE,
-        &uart1RxByte,
-        1U
-    );
-
-    return (status == HAL_OK);
+    return HAL_UART_Receive_IT(
+               &BSP_UART1_HANDLE,
+               &uart1RxByte,
+               1U
+           ) == HAL_OK;
 }
 
 
@@ -68,23 +57,30 @@ bool BSP_UART1_Send(const char *message)
 }
 
 
-bool BSP_UART1_SendData(const uint8_t *data, uint16_t length)
+bool BSP_UART1_SendData(
+    const uint8_t *data,
+    uint16_t length
+)
 {
-    HAL_StatusTypeDef status;
-
     if ((data == NULL) || (length == 0U))
     {
         return false;
     }
 
-    status = HAL_UART_Transmit(
-        &BSP_UART1_HANDLE,
-        (uint8_t *)data,
-        length,
-        BSP_UART1_TX_TIMEOUT_MS
-    );
+    return HAL_UART_Transmit(
+               &BSP_UART1_HANDLE,
+               (uint8_t *)data,
+               length,
+               BSP_UART1_TX_TIMEOUT_MS
+           ) == HAL_OK;
+}
 
-    return (status == HAL_OK);
+
+void BSP_UART1_RegisterRxCallback(
+    BSP_UART1_RxCallback_t callback
+)
+{
+    uart1RxCallback = callback;
 }
 
 
@@ -93,7 +89,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1)
     {
         /*
-         * Inform application about the received byte.
+         * Send the received byte to the registered application callback.
+         * This function executes in interrupt context.
          */
         if (uart1RxCallback != NULL)
         {
@@ -101,7 +98,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         }
 
         /*
-         * Restart UART reception for the next byte.
+         * Arm UART1 reception for the next byte.
          */
         (void)HAL_UART_Receive_IT(
             &BSP_UART1_HANDLE,
@@ -110,17 +107,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         );
     }
 }
+
+
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
     {
         /*
-         * Clear UART overrun condition.
+         * Clear UART overrun error.
          */
         __HAL_UART_CLEAR_OREFLAG(huart);
 
         /*
-         * Restart reception.
+         * Restart reception after an error.
          */
         (void)HAL_UART_Receive_IT(
             &BSP_UART1_HANDLE,

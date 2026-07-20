@@ -64,6 +64,11 @@ const osThreadAttr_t Protocol_Task_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 1024 * 4
 };
+/* Definitions for uart1RxQueue */
+osMessageQueueId_t uart1RxQueueHandle;
+const osMessageQueueAttr_t uart1RxQueue_attributes = {
+  .name = "uart1RxQueue"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -97,6 +102,10 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
+
+  /* Create the queue(s) */
+  /* creation of uart1RxQueue */
+  uart1RxQueueHandle = osMessageQueueNew (256, 1, &uart1RxQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
