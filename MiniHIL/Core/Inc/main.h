@@ -31,6 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "config_gpio.h"
 
 /* USER CODE END Includes */
 
@@ -59,8 +60,18 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_1_Pin GPIO_PIN_13
 #define LED_1_GPIO_Port GPIOC
+#define GPO_8_Pin GPIO_PIN_0
+#define GPO_8_GPIO_Port GPIOA
 #define LED_2_Pin GPIO_PIN_1
 #define LED_2_GPIO_Port GPIOA
+#define GPO_4_Pin GPIO_PIN_12
+#define GPO_4_GPIO_Port GPIOB
+#define GPO_3_Pin GPIO_PIN_13
+#define GPO_3_GPIO_Port GPIOB
+#define GPO_2_Pin GPIO_PIN_14
+#define GPO_2_GPIO_Port GPIOB
+#define GPO_1_Pin GPIO_PIN_15
+#define GPO_1_GPIO_Port GPIOB
 #define RELAY_3_Pin GPIO_PIN_7
 #define RELAY_3_GPIO_Port GPIOC
 #define RELAY_2_Pin GPIO_PIN_8
@@ -69,6 +80,12 @@ void Error_Handler(void);
 #define RELAY_1_GPIO_Port GPIOC
 #define RELAY_4_Pin GPIO_PIN_10
 #define RELAY_4_GPIO_Port GPIOC
+#define GPO_7_Pin GPIO_PIN_3
+#define GPO_7_GPIO_Port GPIOB
+#define GPO_6_Pin GPIO_PIN_4
+#define GPO_6_GPIO_Port GPIOB
+#define GPO_5_Pin GPIO_PIN_5
+#define GPO_5_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

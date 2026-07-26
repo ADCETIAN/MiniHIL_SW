@@ -2,12 +2,14 @@
 #include "app_config.h"
 #include "bsp_led.h"
 #include "bsp_relay.h"
+#include "bsp_gpo.h"
 #include "cmsis_os2.h"
 #include "bsp_uart2.h"
 #include "bsp_uart1.h"
 //#include "usart.h"
 #include <string.h>
 #include <stdio.h>
+#include "hil_protocol.h"
 
 /* Queue handle — declared by CubeMX in freertos.c, we extern it */
 uint8_t uart1RxByte;
@@ -52,8 +54,11 @@ static void APP_UART1_RxCallback(uint8_t byte)
 void vProtocolTask(void *pvParameters)
 {
     const char *uart1Message = "UART1 working\r\n";
+    uint8_t receivedByte;
+    HIL_Packet_t receivedPacket;
 
     (void)pvParameters;
+    HIL_Protocol_Init();
 
     Debug_UART_Send("UART1 task started\r\n");
 
@@ -84,7 +89,29 @@ void vProtocolTask(void *pvParameters)
 
     for (;;)
     {
-        osDelay(100U);
+        if (osMessageQueueGet(
+                uart1RxQueueHandle,
+                &receivedByte,
+                NULL,
+                osWaitForever
+            ) == osOK)
+        {
+            if (HIL_Protocol_ProcessByte(
+                    receivedByte,
+                    &receivedPacket
+                ))
+            {
+                Debug_UART_Printf(
+                    "RX CMD=0x%02X LEN=%u\r\n",
+                    receivedPacket.cmd,
+                    receivedPacket.len
+                );
+
+                HIL_Protocol_Execute(
+                    &receivedPacket
+                );
+            }
+        }
     }
 }
 
@@ -92,20 +119,23 @@ void vProtocolTask(void *pvParameters)
 void AppHeartbeatTask(void *argument)
 {
     (void)argument;
-    uint8_t receivedByte;
-    osStatus_t status;
+    //uint8_t receivedByte;
+    //osStatus_t status;
 
     BSP_LED_Init();
+    BSP_Relay_Init();
+    BSP_GPO_Init();
     //int adcValue = 10;
     Debug_UART_Send("Heartbeat task started\r\n");
     for (;;)
     {
+    	osDelay(1);
     	/*BSP_LED_Toggle(BSP_LED_STATUS);
         BSP_LED_Toggle(BSP_LED_ACTIVITY);
         BSP_Relay_Toggle(BSP_RELAY_2);
         BSP_Relay_Toggle(BSP_RELAY_4);*/
 
-        status = osMessageQueueGet(
+        /*status = osMessageQueueGet(
             uart1RxQueueHandle,
             &receivedByte,
             NULL,
@@ -120,7 +150,7 @@ void AppHeartbeatTask(void *argument)
             );
 
             BSP_LED_Toggle(BSP_LED_ACTIVITY);
-        }
+        }*/
     }
 }
 

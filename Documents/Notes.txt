@@ -1,0 +1,284 @@
+Command 
+
+Ping
+PC sends:
+AA F0 00 55
+MCU responds with firmware version 1.0:
+AA F1 02 01 00 55
+
+GPIO channel 2 ON
+AA 10 02 02 01 55
+AA = SOF
+10 = CMD_GPIO_SET
+02 = data length
+02 = GPIO channel
+01 = ON
+55 = EOF
+
+With your simplified protocol:
+
+Frame Format
+
+PC → MCU
++------+-----+-----+-------------+------+
+| SOF  | CMD | LEN | DATA (0-LEN)| EOF  |
++------+-----+-----+-------------+------+
+
+MCU → PC
++------+-----+-----+-------------+------+
+| SOF  | RSP | LEN | DATA (0-LEN)| EOF  |
++------+-----+-----+-------------+------+
+
+SOF = 0xAA
+EOF = 0x55
+1. Ping
+PC → MCU
+
+Request firmware version.
+
+Byte	Value	Meaning
+SOF	AA	Start of frame
+CMD	F0	CMD_PING
+LEN	00	No payload
+EOF	55	End of frame
+AA F0 00 55
+MCU → PC
+
+Firmware version 1.2
+
+Byte	Value	Meaning
+SOF	AA	Start
+RSP	F1	RSP_PONG
+LEN	02	Two bytes
+DATA0	01	Major version
+DATA1	02	Minor version
+EOF	55	End
+AA F1 02 01 02 55
+2. GPIO SET
+
+Turn GPIO2 ON
+
+PC → MCU
+AA 10 02 02 01 55
+Byte	Meaning
+AA	SOF
+10	CMD_GPIO_SET
+02	Payload length
+02	GPIO number
+01	ON
+55	EOF
+MCU → PC
+
+ACK
+
+AA 01 01 10 55
+
+Meaning
+
+Byte	Meaning
+AA	SOF
+01	RSP_OK
+01	Payload length
+10	ACK for CMD_GPIO_SET
+55	EOF
+3. Relay SET
+
+Turn Relay1 OFF
+
+PC → MCU
+AA 20 02 01 00 55
+
+Meaning
+
+CMD = Relay Set
+
+Relay = 1
+State = OFF
+MCU → PC
+AA 01 01 20 55
+
+ACK for Relay command.
+
+4. ADC START
+
+Suppose
+
+ADC0
+1000 Hz sampling
+
+Payload
+
+DATA0 = ADC Channel = 0
+
+DATA1 = 1000 LSB = E8
+
+DATA2 = 1000 MSB = 03
+
+Frame
+
+AA 30 03 00 E8 03 55
+Byte	Meaning
+30	CMD_ADC_START
+03	3 payload bytes
+00	ADC0
+E8	1000Hz LSB
+03	1000Hz MSB
+MCU → PC
+AA 01 01 30 55
+
+ACK.
+
+5. ADC DATA
+
+Suppose MCU samples ADC0 = 3250
+
+3250 decimal = 0x0CB2
+
+Little Endian
+
+LSB = B2
+
+MSB = 0C
+
+Frame
+
+AA 02 03 00 B2 0C 55
+
+Meaning
+
+Byte	Meaning
+02	RSP_ADC_DATA
+03	3 bytes payload
+00	ADC0
+B2	ADC LSB
+0C	ADC MSB
+
+PC reconstructs
+
+adc =
+    data[1] |
+    (data[2] << 8);
+
+Result
+
+3250
+6. Wave Generator
+
+Example
+
+Mode = Sine
+
+Frequency = 500 Hz
+
+Amplitude = 3000 mV
+
+Payload
+
+Mode = 0
+
+500 = 0x01F4
+
+LSB = F4
+MSB = 01
+
+3000 = 0x0BB8
+
+LSB = B8
+MSB = 0B
+
+Frame
+
+AA 40 05 00 F4 01 B8 0B 55
+
+Meaning
+
+CMD_WGEN_SET
+
+Mode = 0
+
+Frequency = 500Hz
+
+Amplitude = 3000mV
+7. Button State
+
+Suppose Button2 pressed.
+
+AA 04 02 02 01 55
+
+Meaning
+
+Byte	Meaning
+04	RSP_BTN_STATE
+02	2 payload bytes
+02	Button2
+01	Pressed
+8. GPIO State
+
+Suppose GPIO4 becomes HIGH.
+
+AA 03 02 04 01 55
+
+Meaning
+
+GPIO4
+
+HIGH
+9. Error Response
+
+Suppose GPIO number 15 doesn't exist.
+
+AA FF 02 10 03 55
+
+Meaning
+
+Byte	Meaning
+FF	RSP_ERROR
+02	2 payload bytes
+10	Command that failed (CMD_GPIO_SET)
+03	Invalid channel
+
+This format is useful because the PC immediately knows:
+
+which command failed (0x10)
+why it failed (0x03 = invalid channel)
+Summary
+Command	TX Frame
+Ping	AA F0 00 55
+GPIO2 ON	AA 10 02 02 01 55
+Relay1 OFF	AA 20 02 01 00 55
+get relay status AA 21 01 01 55
+ADC0 Start @1000Hz	AA 30 03 00 E8 03 55
+WaveGen 500Hz 3V	AA 40 05 00 F4 01 B8 0B 55
+Response	RX Frame
+ACK GPIO	AA 01 01 10 55
+Firmware 1.2	AA F1 02 01 02 55
+ADC0 = 3250	AA 02 03 00 B2 0C 55
+GPIO4 HIGH	AA 03 02 04 01 55
+Button2 Pressed	AA 04 02 02 01 55
+Error	AA FF 02 10 03 55
+Small protocol improvement
+
+Instead of sending just RSP_OK, I recommend making every acknowledgment include the original command:
+
+AA 01 01 <CMD> 55
+
+For example:
+
+GPIO ACK: AA 01 01 10 55
+Relay ACK: AA 01 01 20 55
+ADC Start ACK: AA 01 01 30 55
+
+This allows the PC application to match acknowledgments to the commands it sent, which becomes especially important if multiple commands are in flight.
+___________________________________________________________________________________________
+Relay:-
+CMD_RELAY_SET AA 20 02 02 01 55
+ACK AA 01 01 10 55
+CMD_RELAY_GET AA 21 01 01 55
+ACK AA 06 01 00 55
+
+GPO:-
+CMD_GPO_SET AA 10 02 01 00 55
+ACK AA 01 01 10 55
+CMD_GPO_GET AA 11 01 01 55
+ACK AA 05 01 00 55
+
