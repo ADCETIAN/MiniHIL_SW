@@ -10,6 +10,7 @@
 #include "bsp_uart1.h"
 #include "bsp_relay.h"
 #include "bsp_gpo.h"
+#include "bsp_dcrelay.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -232,55 +233,143 @@ void HIL_Protocol_Execute(
 
     switch (packet->cmd)
     {
-    case CMD_GPO_GET:
-    {
-        uint8_t protocolGpoId;
-        uint8_t responseData[2];
-        BSP_GpoId_t bspGpoId;
-        bool logicalState;
-
-        if (packet->len != 1U)
+        case CMD_DC_RELAY_SET:
         {
-            HIL_Protocol_SendError(
-                HIL_ERROR_INVALID_LENGTH
+            uint8_t relayId;
+            uint8_t requestedState;
+            BSP_DC_RelayId_t bspRelayId;
+
+            if (packet->len != 2U)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_LENGTH
+                );
+                break;
+            }
+
+            relayId = packet->data[0];
+            requestedState = packet->data[1];
+
+            if (relayId >= BSP_DC_RELAY_COUNT)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_CHANNEL
+                );
+                break;
+            }
+
+            if (requestedState > 1U)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_DATA
+                );
+                break;
+            }
+
+            bspRelayId =
+                (BSP_DC_RelayId_t)relayId;
+
+            if (!BSP_DC_Relay_Set(
+                    bspRelayId,
+                    requestedState != 0U))
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_EXECUTION_FAILED
+                );
+                break;
+            }
+
+            HIL_Protocol_SendCommandOK(
+                CMD_DC_RELAY_SET
             );
+
             break;
         }
-
-        protocolGpoId = packet->data[0];
-
-        if ((protocolGpoId < 1U) ||
-            (protocolGpoId > (uint8_t)BSP_GPO_COUNT))
+        case CMD_DC_RELAY_GET:
         {
-            HIL_Protocol_SendError(
-                HIL_ERROR_INVALID_CHANNEL
+            uint8_t relayId;
+            uint8_t responseData;
+            bool relayState;
+
+            if (packet->len != 1U)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_LENGTH
+                );
+                break;
+            }
+
+            relayId = packet->data[0];
+
+            if (relayId >= BSP_DC_RELAY_COUNT)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_CHANNEL
+                );
+                break;
+            }
+
+            relayState = BSP_DC_Relay_GetState((BSP_DC_RelayId_t)relayId);
+
+            responseData = relayState ? 1U : 0U;
+
+            (void)HIL_Protocol_SendPacket(
+                RSP_DC_RELAY_STATE,
+                &responseData,
+                sizeof(responseData)
             );
+
             break;
         }
+        case CMD_GPO_GET:
+        {
+            uint8_t protocolGpoId;
+            uint8_t responseData[2];
+            BSP_GpoId_t bspGpoId;
+            bool logicalState;
 
-        bspGpoId =
-            (BSP_GpoId_t)(protocolGpoId - 1U);
+            if (packet->len != 1U)
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_LENGTH
+                );
+                break;
+            }
 
-        logicalState =
-            BSP_GPO_GetState(bspGpoId);
+            protocolGpoId = packet->data[0];
 
-        /*
-        * Send ID and logical state.
-        *
-        * responseData[0] = protocol GPO ID, 1–8
-        * responseData[1] = logical state, 0 or 1
-        */
-        responseData[0] = protocolGpoId;
-        responseData[1] = logicalState ? 1U : 0U;
+            if ((protocolGpoId < 1U) ||
+                (protocolGpoId > (uint8_t)BSP_GPO_COUNT))
+            {
+                HIL_Protocol_SendError(
+                    HIL_ERROR_INVALID_CHANNEL
+                );
+                break;
+            }
 
-        (void)HIL_Protocol_SendPacket(
-            RSP_GPO_STATE,
-            responseData,
-            sizeof(responseData)
-        );
+            bspGpoId =
+                (BSP_GpoId_t)(protocolGpoId - 1U);
 
-        break;
-    }
+            logicalState =
+                BSP_GPO_GetState(bspGpoId);
+
+            /*
+            * Send ID and logical state.
+            *
+            * responseData[0] = protocol GPO ID, 1–8
+            * responseData[1] = logical state, 0 or 1
+            */
+            responseData[0] = protocolGpoId;
+            responseData[1] = logicalState ? 1U : 0U;
+
+            (void)HIL_Protocol_SendPacket(
+                RSP_GPO_STATE,
+                responseData,
+                sizeof(responseData)
+            );
+
+            break;
+        }
         case CMD_GPO_SET:
         {
             uint8_t protocolGpoId;

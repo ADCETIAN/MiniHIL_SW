@@ -3,6 +3,7 @@
 #include "bsp_led.h"
 #include "bsp_relay.h"
 #include "bsp_gpo.h"
+#include "bsp_dcrelay.h"
 #include "cmsis_os2.h"
 #include "bsp_uart2.h"
 #include "bsp_uart1.h"
@@ -125,6 +126,7 @@ void AppHeartbeatTask(void *argument)
     BSP_LED_Init();
     BSP_Relay_Init();
     BSP_GPO_Init();
+    BSP_DC_Relay_Init();
     //int adcValue = 10;
     Debug_UART_Send("Heartbeat task started\r\n");
     for (;;)

@@ -80,6 +80,10 @@ void Error_Handler(void);
 #define RELAY_1_GPIO_Port GPIOC
 #define RELAY_4_Pin GPIO_PIN_10
 #define RELAY_4_GPIO_Port GPIOC
+#define DC_Relay_1_Pin GPIO_PIN_11
+#define DC_Relay_1_GPIO_Port GPIOC
+#define DC_Relay_2_Pin GPIO_PIN_12
+#define DC_Relay_2_GPIO_Port GPIOC
 #define GPO_7_Pin GPIO_PIN_3
 #define GPO_7_GPIO_Port GPIOB
 #define GPO_6_Pin GPIO_PIN_4

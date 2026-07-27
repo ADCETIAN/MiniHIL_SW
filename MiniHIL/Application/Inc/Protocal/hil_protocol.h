@@ -19,9 +19,11 @@
 #define CMD_GPO_GET             0x11U
 #define CMD_RELAY_SET           0x20U
 #define CMD_RELAY_GET           0x21U
-#define CMD_ADC_START           0x30U
-#define CMD_ADC_STOP            0x31U
-#define CMD_WGEN_SET            0x40U
+#define CMD_DC_RELAY_SET        0x30U
+#define CMD_DC_RELAY_GET        0x31U
+#define CMD_ADC_START           0x40U
+#define CMD_ADC_STOP            0x41U
+#define CMD_WGEN_SET            0x50U
 #define CMD_PING                0xF0U
 
 /* Responses MCU → PC */
@@ -31,6 +33,7 @@
 #define RSP_BTN_STATE           0x04U
 #define RSP_GPO_STATE           0x05U
 #define RSP_RELAY_STATE         0x06U
+#define RSP_DC_RELAY_STATE      0x07U
 #define RSP_PONG                0xF1U
 #define RSP_ERROR               0xFFU
 
